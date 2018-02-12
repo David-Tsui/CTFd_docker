@@ -1,0 +1,41 @@
+version: "2.1"
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./server/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: always
+    depends_on:
+      - ctfd
+  ctfd:
+    build:
+      context: .
+      dockerfile: CTFd.Dockerfile
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+  mysql:
+    image: mysql
+    restart: always
+    ports:
+      - '3306:3306'
+    env_file:
+      - ./.env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+volumes:
+  db-data:
